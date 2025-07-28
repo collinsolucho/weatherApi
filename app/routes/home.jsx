@@ -1,4 +1,5 @@
 import { Welcome } from "../welcome/welcome";
+import { Form, useNavigation } from "react-router";
 
 export function meta() {
   return [
@@ -6,18 +7,57 @@ export function meta() {
     { name: "description", content: "Welcome to React Router!" },
   ];
 }
-export async function loader() {
-  let res = await fetch(
-    // `https://api.openweathermap.org/data/2.5/weather?lat=0.5143&lon=35.2698&appid=250b5d78bdb3551957a8e872ab1ca711`
-    `https://api.openweathermap.org/data/2.5/weather?q=japan&appid=250b5d78bdb3551957a8e872ab1ca711&units=metric`
-  );
-  let weather = await res.json();
-  console.log({ weather });
-  return weather;
+//for searching we use a get request
+//for authentication we use a post request
+export async function loader({ request }) {
+  //when a submission is made, the loader will be called
+  //the loader is called when the page is loaded, and the action is called when the form is submitted through the request
+  //the request is the request object that is passed to the loader function
+  console.log({ request });
+  let url = new URL(request.url);
+  //we setting the url variable to the request url
+  //we passing the request url to the URL constructor to get the search params
+  console.log({ url });
+  let searchParams = url.searchParams;
+  //we setting the searchParams variable to the search params of the url
+  let city = searchParams.get("name") || "cairo";
+
+  // creating a variable city to get the name from the search params with
+  // if the name is not found, we set it to cairo (as default value)
+  //.get helps to get the value of the search params with name prope
+
+  // console.log({ city });
+  if (!city) {
+    throw new Response("City not found", { status: 404 });
+  }
+  // console.log({ url });
+  try {
+    let res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=250b5d78bdb3551957a8e872ab1ca711&units=metric`
+    );
+
+    if (!res.ok) {
+      throw new Response("City not found", { status: 404 });
+    }
+    // if (!res.ok) {
+    //   throw new Response("City not found", { status: 404 });
+    // }
+    // console.log({ res });
+    // return res.json(); // 🔁 this will be passed to `loaderData` on the next render
+
+    let weather = await res.json();
+    console.log({ weather });
+    return weather;
+  } catch (error) {
+    // This catches network errors like no internet connection
+    throw new Response("Please connect to a network", { status: 503 });
+  }
 }
 
 export default function Home({ loaderData }) {
-  console.log(loaderData.main.temp);
+  // let loaderData = useLoaderData();
+  // let actionData = useActionData();
+  // let data = actionData || loaderData;
   // Object.entries(loaderData.main).map(([key, Value]) => {
   //   if (key === "temp") {
   //     console.log(`${key}: ${Value}`);
@@ -28,9 +68,19 @@ export default function Home({ loaderData }) {
   // but a shorter way just have <p>Temperature: {loaderData.main.temp}</p>
   // maps dont work in objects,so can get values by loader.value needed
   //to loop through an object , use map then if its an array,
-
+  let navigation = useNavigation();
+  // console.log({ navigation });
+  // navigation.state === "loading" ? <Welcome /> : null;
+  // this will show the welcome component when the page is loading
+  if (navigation.state === "loading") {
+    return <Welcome />;
+  }
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center text-white font-sans">
+    <div
+      className={
+        "min-h-screen $is bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center text-white font-sans"
+      }
+    >
       <div className="bg-black bg-opacity-40 backdrop-blur-md rounded-3xl overflow-hidden w-[800px] h-[400px] grid grid-cols-2 shadow-xl">
         {/* Left: Weather Overview */}
         <div
@@ -54,19 +104,27 @@ export default function Home({ loaderData }) {
 
         {/* Right: Details Panel */}
         <div className="bg-black bg-opacity-50 p-8 relative">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Another location"
-              className="w-full px-4 py-2 bg-transparent border border-gray-600 rounded-md text-white focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="absolute top-8 right-10 text-orange-400 text-xl cursor-pointer"
-            >
-              🔍
-            </button>
-          </div>
+          <label htmlFor="">
+            {" "}
+            <Form action="" method="GET" className="mb-4">
+              {/* the get method  helps to make a request to a serve(others,request) 
+              and its also a default value of forms*/}
+              <input
+                type="search"
+                defaultValue={loaderData.name}
+                aria-label="city name"
+                placeholder="Another location"
+                name="name"
+                className="w-full px-4 py-2 bg-transparent border border-gray-600 rounded-md text-white focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="absolute top-8 right-10 text-orange-400 text-xl cursor-pointer"
+              >
+                🔍
+              </button>
+            </Form>
+          </label>
 
           <ul className="space-y-2 text-sm text-gray-400">
             <li>Birmingham</li>
